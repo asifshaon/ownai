@@ -8,11 +8,11 @@ set -e
 # Gateway to Google Cloud Run with a Cloud Storage FUSE persistent mount
 # and Firestore session synchronization.
 
-PROJECT_ID="ai-assistent-491400"
-REGION="us-central1"
-SERVICE_NAME="openclaw-gateway"
-BUCKET_NAME="openclaw-storage-ai-assistent-491400"
-IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}:latest"
+PROJECT_ID="${PROJECT_ID:-ai-assistent-491400}"
+REGION="${REGION:-us-central1}"
+SERVICE_NAME="${SERVICE_NAME:-openclaw-gateway}"
+BUCKET_NAME="${BUCKET_NAME:-openclaw-storage-ai-assistent-491400}"
+IMAGE_NAME="${IMAGE_NAME:-gcr.io/${PROJECT_ID}/${SERVICE_NAME}:latest}"
 
 export MSYS_NO_PATHCONV=1
 GCLOUD_PATH="C:\Google-Cloud-SDK-Archive\google-cloud-sdk\bin\gcloud.cmd"
@@ -49,7 +49,7 @@ COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
 echo "5. Deploying Cloud Run Service with Gen 2 Execution Environment and FUSE Mount..."
 # Generate a random initial token
-GATEWAY_TOKEN=$(openssl rand -hex 16)
+GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-$(openssl rand -hex 16)}"
 
 "$GCLOUD_PATH" run deploy "$SERVICE_NAME" \
   --image "$IMAGE_NAME" \

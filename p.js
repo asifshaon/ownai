@@ -1,0 +1,1 @@
+import { loadOpenClawPlugins } from "./src/plugins/loader.ts"; const env = process.env; const reg = loadOpenClawPlugins({ env, config: { plugins: { loadPaths: ["./extensions"] } } }); import { listChannelPlugins } from "./src/channels/plugins/registry.ts"; const plugins = listChannelPlugins(); console.log("plugins:", plugins.map(p => ({ id: p.id, methods: p.gatewayMethods })));

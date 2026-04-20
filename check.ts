@@ -1,0 +1,1 @@
+import whatsappPluginEntry from "./extensions/whatsapp/index.ts"; console.log("id:", whatsappPluginEntry.plugin.id); console.log("gatewayMethods:", whatsappPluginEntry.plugin.gatewayMethods);

@@ -48,6 +48,7 @@ import {
   mergeSessionEntryPreserveActivity,
   type SessionEntry,
 } from "./types.js";
+import { saveSessionStoreToFirestore } from "./firestore-store.js";
 
 export {
   clearSessionStoreCacheForTest,
@@ -346,6 +347,14 @@ async function saveSessionStoreUnlocked(
         capped,
         diskBudget,
       });
+    }
+  }
+
+  if (process.env.OPENCLAW_SESSION_STORE_DRIVER === "firestore") {
+    try {
+      await saveSessionStoreToFirestore(store);
+    } catch (err) {
+      log.error(`Failed to save session store to Firestore: ${String(err)}`);
     }
   }
 

@@ -26,7 +26,17 @@ export function schemaType(schema: JsonSchema): string | undefined {
   if (Array.isArray(schema.type)) {
     return schema.type.find((t) => t !== "null") ?? schema.type[0];
   }
-  return schema.type;
+  if (schema.type) {
+    return schema.type;
+  }
+  // Infer type from structural cues when explicit type is missing.
+  if (schema.properties || typeof schema.additionalProperties === "object") {
+    return "object";
+  }
+  if (schema.items) {
+    return "array";
+  }
+  return undefined;
 }
 
 export function defaultValue(schema?: JsonSchema): unknown {

@@ -1167,7 +1167,6 @@ export function createPluginRegistry(registryParams: PluginRegistryParams) {
       handlers: {
         ...(registrationMode === "full"
           ? {
-              registerTool: (tool, opts) => registerTool(record, tool, opts),
               registerHook: (events, handler, opts) =>
                 registerHook(record, events, handler, opts, params.config),
               registerHttpRoute: (routeParams) => registerHttpRoute(record, routeParams),
@@ -1201,8 +1200,6 @@ export function createPluginRegistry(registryParams: PluginRegistryParams) {
                 registerMusicGenerationProvider(record, provider),
               registerWebFetchProvider: (provider) => registerWebFetchProvider(record, provider),
               registerWebSearchProvider: (provider) => registerWebSearchProvider(record, provider),
-              registerGatewayMethod: (method, handler, opts) =>
-                registerGatewayMethod(record, method, handler, opts),
               registerService: (service) => registerService(record, service),
               registerCliBackend: (backend) => registerCliBackend(record, backend),
               registerTextTransforms: (transforms) => registerTextTransforms(record, transforms),
@@ -1438,6 +1435,13 @@ export function createPluginRegistry(registryParams: PluginRegistryParams) {
           : {}),
         // Allow setup-only/setup-runtime paths to surface parse-time CLI metadata
         // without opting into the wider full-registration surface.
+        ...(registrationMode !== "setup-only"
+          ? {
+              registerTool: (tool, opts) => registerTool(record, tool, opts),
+              registerGatewayMethod: (method, handler, opts) =>
+                registerGatewayMethod(record, method, handler, opts),
+            }
+          : {}),
         registerCli: (registrar, opts) => registerCli(record, registrar, opts),
         registerChannel: (registration) => registerChannel(record, registration, registrationMode),
       },

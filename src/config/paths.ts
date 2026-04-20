@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { resolveHomeRelativePath, resolveRequiredHomeDir } from "../infra/home-dir.js";
-import type { OpenClawConfig } from "./types.js";
+import type { OpenClawConfig, GatewayBindMode } from "./types.js";
 
 /**
  * Nix mode detection: When OPENCLAW_NIX_MODE=1, the gateway is running under Nix.
@@ -286,7 +286,7 @@ export function resolveGatewayPort(
   cfg?: OpenClawConfig,
   env: NodeJS.ProcessEnv = process.env,
 ): number {
-  const envRaw = env.OPENCLAW_GATEWAY_PORT?.trim();
+  const envRaw = (env.OPENCLAW_GATEWAY_PORT ?? env.PORT)?.trim();
   const envPort = parseGatewayPortEnvValue(envRaw);
   if (envPort !== null) {
     return envPort;
@@ -298,4 +298,55 @@ export function resolveGatewayPort(
     }
   }
   return DEFAULT_GATEWAY_PORT;
+}
+
+export function resolveGatewayBindMode(
+  cfg?: OpenClawConfig,
+  env: NodeJS.ProcessEnv = process.env,
+): GatewayBindMode {
+  const envRaw = env.OPENCLAW_GATEWAY_BIND?.trim() as GatewayBindMode | undefined;
+  if (
+    envRaw === "loopback" ||
+    envRaw === "lan" ||
+    envRaw === "auto" ||
+    envRaw === "custom" ||
+    envRaw === "tailnet"
+  ) {
+    return envRaw;
+  }
+  const configBind = cfg?.gateway?.bind;
+  if (configBind) {
+    return configBind;
+  }
+  return "loopback";
+}
+
+export function resolveGatewayControlUiAllowedOrigins(
+  cfg?: OpenClawConfig,
+  env: NodeJS.ProcessEnv = process.env,
+): string[] {
+  const envRaw = env.OPENCLAW_GATEWAY_CONTROL_UI_ALLOWED_ORIGINS?.trim();
+  if (envRaw) {
+    return envRaw
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+  }
+  return (cfg?.gateway?.controlUi?.allowedOrigins ?? [])
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+export function resolveGatewayControlUiDangerouslyAllowHostHeaderOriginFallback(
+  cfg?: OpenClawConfig,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  const envRaw = env.OPENCLAW_GATEWAY_CONTROL_UI_DANGEROUSLY_ALLOW_HOST_HEADER_ORIGIN_FALLBACK?.trim();
+  if (envRaw === "1" || envRaw?.toLowerCase() === "true") {
+    return true;
+  }
+  if (envRaw === "0" || envRaw?.toLowerCase() === "false") {
+    return false;
+  }
+  return cfg?.gateway?.controlUi?.dangerouslyAllowHostHeaderOriginFallback === true;
 }

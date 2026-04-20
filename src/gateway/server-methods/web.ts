@@ -10,12 +10,23 @@ import {
 import { formatForLog } from "../ws-log.js";
 import type { GatewayRequestHandlers, RespondFn } from "./types.js";
 
+import { requireActivePluginChannelRegistry } from "../../plugins/runtime.js";
+
 const WEB_LOGIN_METHODS = new Set(["web.login.start", "web.login.wait"]);
 
-const resolveWebLoginProvider = () =>
-  listChannelPlugins().find((plugin) =>
+const resolveWebLoginProvider = () => {
+  const setupPlugin = requireActivePluginChannelRegistry().channelSetups.find((entry) =>
+    (entry.plugin.gatewayMethods ?? []).some((method) => WEB_LOGIN_METHODS.has(method)),
+  )?.plugin;
+
+  if (setupPlugin) {
+    return setupPlugin;
+  }
+
+  return listChannelPlugins().find((plugin) =>
     (plugin.gatewayMethods ?? []).some((method) => WEB_LOGIN_METHODS.has(method)),
   ) ?? null;
+};
 
 function resolveAccountId(params: unknown): string | undefined {
   return typeof (params as { accountId?: unknown }).accountId === "string"

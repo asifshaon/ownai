@@ -451,10 +451,18 @@ export function renderNode(params: {
   const criteria = params.searchCriteria;
 
   if (unsupported.has(key)) {
-    return html`<div class="cfg-field cfg-field--error">
-      <div class="cfg-field__label">${label}</div>
-      <div class="cfg-field__error">Unsupported schema node. Use Raw mode.</div>
-    </div>`;
+    return renderJsonTextarea({
+      schema,
+      value,
+      path,
+      hints,
+      disabled,
+      showLabel,
+      revealSensitive: params.revealSensitive ?? false,
+      isSensitivePathRevealed: params.isSensitivePathRevealed,
+      onToggleSensitivePath: params.onToggleSensitivePath,
+      onPatch,
+    });
   }
   if (
     criteria &&
@@ -640,13 +648,19 @@ export function renderNode(params: {
     return renderTextInput({ ...params, inputType: "text" });
   }
 
-  // Fallback
-  return html`
-    <div class="cfg-field cfg-field--error">
-      <div class="cfg-field__label">${label}</div>
-      <div class="cfg-field__error">Unsupported type: ${type}. Use Raw mode.</div>
-    </div>
-  `;
+  // Fallback — render as editable JSON textarea for unknown or missing types.
+  return renderJsonTextarea({
+    schema,
+    value,
+    path,
+    hints,
+    disabled,
+    showLabel,
+    revealSensitive: params.revealSensitive ?? false,
+    isSensitivePathRevealed: params.isSensitivePathRevealed,
+    onToggleSensitivePath: params.onToggleSensitivePath,
+    onPatch,
+  });
 }
 
 function renderTextInput(params: {
@@ -1088,12 +1102,18 @@ function renderArray(params: {
 
   const itemsSchema = Array.isArray(schema.items) ? schema.items[0] : schema.items;
   if (!itemsSchema) {
-    return html`
-      <div class="cfg-field cfg-field--error">
-        <div class="cfg-field__label">${label}</div>
-        <div class="cfg-field__error">Unsupported array schema. Use Raw mode.</div>
-      </div>
-    `;
+    return renderJsonTextarea({
+      schema,
+      value,
+      path,
+      hints,
+      disabled,
+      showLabel,
+      revealSensitive: revealSensitive ?? false,
+      isSensitivePathRevealed,
+      onToggleSensitivePath,
+      onPatch,
+    });
   }
 
   const arr = Array.isArray(value) ? value : Array.isArray(schema.default) ? schema.default : [];

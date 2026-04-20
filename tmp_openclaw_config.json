@@ -1,0 +1,10 @@
+{
+  "gateway": {
+    "bind": "lan",
+    "controlUi": {
+      "dangerouslyDisableDeviceAuth": true,
+      "allowedOrigins": ["*"],
+      "dangerouslyAllowHostHeaderOriginFallback": true
+    }
+  }
+}

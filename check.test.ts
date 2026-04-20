@@ -1,0 +1,1 @@
+import { test, expect } from 'vitest'; import whatsappPluginEntry from './extensions/whatsapp/index.ts'; test('check', () => { console.log('id:', whatsappPluginEntry.plugin.id, 'methods:', whatsappPluginEntry.plugin.gatewayMethods); expect(true).toBe(true); });

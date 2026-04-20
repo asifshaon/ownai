@@ -10,6 +10,8 @@ import { isAtLeast, parseSemver } from "./runtime-guard.js";
 import { compareComparableSemver, parseComparableSemver } from "./semver-compare.js";
 import { createTempDownloadTarget } from "./temp-download.js";
 export { parseClawHubPluginSpec } from "./clawhub-spec.js";
+import { retryAsync } from "./retry.js";
+import { resolveRequiredHomeDir } from "./home-dir.js";
 
 const DEFAULT_CLAWHUB_URL = "https://clawhub.ai";
 const DEFAULT_FETCH_TIMEOUT_MS = 30_000;
@@ -398,16 +400,73 @@ async function readErrorBody(response: Response): Promise<string> {
   }
 }
 
+async function clawhubRequestWithRetry(params: ClawHubRequestParams): Promise<{
+  response: Response;
+  url: URL;
+}> {
+  const shouldRetry = (err: unknown) => {
+    if (err instanceof ClawHubRequestError && err.status === 429) {
+      return true;
+    }
+    return false;
+  };
+
+  return await retryAsync(
+    async () => {
+      const { response, url } = await clawhubRequest(params);
+      if (!response.ok) {
+        throw new ClawHubRequestError({
+          path: url.pathname,
+          status: response.status,
+          body: await readErrorBody(response),
+        });
+      }
+      return { response, url };
+    },
+    {
+      attempts: 5,
+      minDelayMs: 2000,
+      maxDelayMs: 60000,
+      jitter: 0.1,
+      shouldRetry,
+    },
+  );
+}
+
 async function fetchJson<T>(params: ClawHubRequestParams): Promise<T> {
-  const { response, url } = await clawhubRequest(params);
-  if (!response.ok) {
-    throw new ClawHubRequestError({
-      path: url.pathname,
-      status: response.status,
-      body: await readErrorBody(response),
-    });
-  }
+  const { response } = await clawhubRequestWithRetry(params);
   return (await response.json()) as T;
+}
+
+async function fetchCachedJson<T>(
+  cacheKey: string,
+  ttlMs: number,
+  fetchFn: () => Promise<T>,
+): Promise<T> {
+  const home = resolveRequiredHomeDir();
+  const cacheDir = path.join(home, ".openclaw", "cache", "clawhub");
+  const cachePath = path.join(cacheDir, `${cacheKey}.json`);
+
+  try {
+    const stats = await fs.stat(cachePath);
+    if (Date.now() - stats.mtimeMs < ttlMs) {
+      const content = await fs.readFile(cachePath, "utf8");
+      return JSON.parse(content) as T;
+    }
+  } catch {
+    // ignore
+  }
+
+  const result = await fetchFn();
+
+  try {
+    await fs.mkdir(cacheDir, { recursive: true });
+    await fs.writeFile(cachePath, JSON.stringify(result, null, 2), "utf8");
+  } catch {
+    // ignore
+  }
+
+  return result;
 }
 
 export function resolveClawHubBaseUrl(baseUrl?: string): string {
@@ -461,12 +520,17 @@ export async function fetchClawHubPackageDetail(params: {
   timeoutMs?: number;
   fetchImpl?: FetchLike;
 }): Promise<ClawHubPackageDetail> {
-  return await fetchJson<ClawHubPackageDetail>({
-    baseUrl: params.baseUrl,
-    path: `/api/v1/packages/${encodeURIComponent(params.name)}`,
-    token: params.token,
-    timeoutMs: params.timeoutMs,
-    fetchImpl: params.fetchImpl,
+  const cacheKey = `package-detail-${createHash("md5").update(params.name).digest("hex")}`;
+  const ttlMs = 15 * 60 * 1000; // 15 minutes
+
+  return await fetchCachedJson(cacheKey, ttlMs, async () => {
+    return await fetchJson<ClawHubPackageDetail>({
+      baseUrl: params.baseUrl,
+      path: `/api/v1/packages/${encodeURIComponent(params.name)}`,
+      token: params.token,
+      timeoutMs: params.timeoutMs,
+      fetchImpl: params.fetchImpl,
+    });
   });
 }
 
@@ -521,18 +585,25 @@ export async function searchClawHubSkills(params: {
   fetchImpl?: FetchLike;
   limit?: number;
 }): Promise<ClawHubSkillSearchResult[]> {
-  const result = await fetchJson<{ results: ClawHubSkillSearchResult[] }>({
-    baseUrl: params.baseUrl,
-    path: "/api/v1/search",
-    token: params.token,
-    timeoutMs: params.timeoutMs,
-    fetchImpl: params.fetchImpl,
-    search: {
-      q: params.query.trim(),
-      limit: params.limit ? String(params.limit) : undefined,
-    },
-  });
-  return result.results ?? [];
+  const cacheKey = `search-${createHash("md5").update(params.query).digest("hex")}-${params.limit ?? 10}`;
+  const ttlMs = 15 * 60 * 1000; // 15 minutes
+
+  const fetchFn = async () => {
+    const result = await fetchJson<{ results: ClawHubSkillSearchResult[] }>({
+      baseUrl: params.baseUrl,
+      path: "/api/v1/search",
+      token: params.token,
+      timeoutMs: params.timeoutMs,
+      fetchImpl: params.fetchImpl,
+      search: {
+        q: params.query.trim(),
+        limit: params.limit ? String(params.limit) : undefined,
+      },
+    });
+    return result.results ?? [];
+  };
+
+  return await fetchCachedJson(cacheKey, ttlMs, fetchFn);
 }
 
 export async function fetchClawHubSkillDetail(params: {
@@ -542,12 +613,17 @@ export async function fetchClawHubSkillDetail(params: {
   timeoutMs?: number;
   fetchImpl?: FetchLike;
 }): Promise<ClawHubSkillDetail> {
-  return await fetchJson<ClawHubSkillDetail>({
-    baseUrl: params.baseUrl,
-    path: `/api/v1/skills/${encodeURIComponent(params.slug)}`,
-    token: params.token,
-    timeoutMs: params.timeoutMs,
-    fetchImpl: params.fetchImpl,
+  const cacheKey = `skill-detail-${createHash("md5").update(params.slug).digest("hex")}`;
+  const ttlMs = 15 * 60 * 1000; // 15 minutes
+
+  return await fetchCachedJson(cacheKey, ttlMs, async () => {
+    return await fetchJson<ClawHubSkillDetail>({
+      baseUrl: params.baseUrl,
+      path: `/api/v1/skills/${encodeURIComponent(params.slug)}`,
+      token: params.token,
+      timeoutMs: params.timeoutMs,
+      fetchImpl: params.fetchImpl,
+    });
   });
 }
 
@@ -558,15 +634,20 @@ export async function listClawHubSkills(params: {
   fetchImpl?: FetchLike;
   limit?: number;
 }): Promise<ClawHubSkillListResponse> {
-  return await fetchJson<ClawHubSkillListResponse>({
-    baseUrl: params.baseUrl,
-    path: "/api/v1/skills",
-    token: params.token,
-    timeoutMs: params.timeoutMs,
-    fetchImpl: params.fetchImpl,
-    search: {
-      limit: params.limit ? String(params.limit) : undefined,
-    },
+  const cacheKey = `list-${params.limit ?? "all"}`;
+  const ttlMs = 30 * 60 * 1000; // 30 minutes
+
+  return await fetchCachedJson(cacheKey, ttlMs, async () => {
+    return await fetchJson<ClawHubSkillListResponse>({
+      baseUrl: params.baseUrl,
+      path: "/api/v1/skills",
+      token: params.token,
+      timeoutMs: params.timeoutMs,
+      fetchImpl: params.fetchImpl,
+      search: {
+        limit: params.limit ? String(params.limit) : undefined,
+      },
+    });
   });
 }
 
@@ -584,7 +665,7 @@ export async function downloadClawHubPackageArchive(params: {
     : params.tag
       ? { tag: params.tag }
       : undefined;
-  const { response, url } = await clawhubRequest({
+  const { response } = await clawhubRequestWithRetry({
     baseUrl: params.baseUrl,
     path: `/api/v1/packages/${encodeURIComponent(params.name)}/download`,
     search,
@@ -592,13 +673,6 @@ export async function downloadClawHubPackageArchive(params: {
     timeoutMs: params.timeoutMs,
     fetchImpl: params.fetchImpl,
   });
-  if (!response.ok) {
-    throw new ClawHubRequestError({
-      path: url.pathname,
-      status: response.status,
-      body: await readErrorBody(response),
-    });
-  }
   const bytes = new Uint8Array(await response.arrayBuffer());
   const target = await createTempDownloadTarget({
     prefix: "openclaw-clawhub-package",
@@ -622,25 +696,19 @@ export async function downloadClawHubSkillArchive(params: {
   timeoutMs?: number;
   fetchImpl?: FetchLike;
 }): Promise<ClawHubDownloadResult> {
-  const { response, url } = await clawhubRequest({
+  const search = {
+    slug: params.slug,
+    version: params.version,
+    tag: params.version ? undefined : params.tag,
+  };
+  const { response } = await clawhubRequestWithRetry({
     baseUrl: params.baseUrl,
     path: "/api/v1/download",
+    search,
     token: params.token,
     timeoutMs: params.timeoutMs,
     fetchImpl: params.fetchImpl,
-    search: {
-      slug: params.slug,
-      version: params.version,
-      tag: params.version ? undefined : params.tag,
-    },
   });
-  if (!response.ok) {
-    throw new ClawHubRequestError({
-      path: url.pathname,
-      status: response.status,
-      body: await readErrorBody(response),
-    });
-  }
   const bytes = new Uint8Array(await response.arrayBuffer());
   const target = await createTempDownloadTarget({
     prefix: "openclaw-clawhub-skill",

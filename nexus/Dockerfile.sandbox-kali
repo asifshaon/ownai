@@ -1,0 +1,233 @@
+# syntax=docker/dockerfile:1.7
+# ============================================================================
+# NEXUS Kali Linux Sandbox
+# Full offensive + defensive cybersecurity toolkit
+# Used by OpenClaw as SSH sandbox backend for security operations
+# ============================================================================
+
+FROM kalilinux/kali-rolling
+
+LABEL maintainer="NEXUS AI Platform"
+LABEL description="Kali Linux sandbox with curated security tools for AI-driven operations"
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
+# --------------------------------------------------------------------------
+# System update + base utilities
+# --------------------------------------------------------------------------
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      wget \
+      git \
+      vim \
+      nano \
+      tmux \
+      screen \
+      htop \
+      jq \
+      tree \
+      unzip \
+      zip \
+      p7zip-full \
+      openssh-server \
+      sudo \
+      locales \
+      procps \
+      iproute2 \
+      iputils-ping \
+      dnsutils \
+      net-tools \
+      lsof \
+      file \
+      xxd \
+      bc \
+    && rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------------------------------
+# Reconnaissance & OSINT
+# --------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      nmap \
+      masscan \
+      amass \
+      subfinder \
+      httpx-toolkit \
+      dnsx \
+      fierce \
+      dnsrecon \
+      whois \
+      theharvester \
+      recon-ng \
+    && rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------------------------------
+# Web Application Testing
+# --------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      nikto \
+      sqlmap \
+      wfuzz \
+      gobuster \
+      ffuf \
+      dirb \
+      commix \
+      zaproxy \
+    && rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------------------------------
+# Network Exploitation & Lateral Movement
+# --------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      metasploit-framework \
+      netcat-openbsd \
+      socat \
+      proxychains4 \
+      tor \
+      responder \
+      crackmapexec \
+      evil-winrm \
+      smbclient \
+      enum4linux \
+    && rm -rf /var/lib/apt/lists/*
+
+# Impacket (Python-based network tools)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3-impacket \
+      impacket-scripts \
+    && rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------------------------------
+# Password & Cryptography
+# --------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      hashcat \
+      john \
+      hydra \
+      medusa \
+      crunch \
+      cewl \
+      seclists \
+      wordlists \
+    && rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------------------------------
+# Wireless (limited in Docker — no hardware access)
+# --------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      aircrack-ng \
+    && rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------------------------------
+# Post-Exploitation & Privilege Escalation
+# --------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      exploitdb \
+      powershell-empire \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download post-exploitation scripts
+RUN mkdir -p /opt/post-exploit && \
+    git clone --depth=1 https://github.com/peass-ng/PEASS-ng.git /opt/post-exploit/peass-ng || true && \
+    git clone --depth=1 https://github.com/DominicBreuker/pspy.git /opt/post-exploit/pspy || true && \
+    git clone --depth=1 https://github.com/BloodHoundAD/BloodHound.git /opt/post-exploit/bloodhound || true
+
+# --------------------------------------------------------------------------
+# Digital Forensics & Reverse Engineering
+# --------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      binwalk \
+      foremost \
+      volatility3 \
+      radare2 \
+      strings \
+      exiftool \
+      steghide \
+    && rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------------------------------
+# Container & Infrastructure Security
+# --------------------------------------------------------------------------
+RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin || true
+
+# --------------------------------------------------------------------------
+# Network Monitoring & Traffic Analysis
+# --------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      tcpdump \
+      tshark \
+      ngrep \
+    && rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------------------------------
+# Programming Languages & Build Tools
+# --------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3 \
+      python3-pip \
+      python3-venv \
+      golang \
+      ruby \
+      ruby-dev \
+      build-essential \
+      libssl-dev \
+      libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python security libraries
+RUN pip3 install --break-system-packages --no-cache-dir \
+      scapy \
+      pwntools \
+      requests \
+      beautifulsoup4 \
+      paramiko \
+      cryptography \
+      shodan \
+      censys \
+      virustotal3 \
+      OTXv2 \
+    || true
+
+# --------------------------------------------------------------------------
+# SSH Server Configuration (for OpenClaw sandbox backend)
+# --------------------------------------------------------------------------
+RUN mkdir -p /var/run/sshd && \
+    echo "PermitRootLogin no" >> /etc/ssh/sshd_config && \
+    echo "PasswordAuthentication no" >> /etc/ssh/sshd_config && \
+    echo "PubkeyAuthentication yes" >> /etc/ssh/sshd_config && \
+    echo "AllowTcpForwarding no" >> /etc/ssh/sshd_config && \
+    echo "X11Forwarding no" >> /etc/ssh/sshd_config
+
+# --------------------------------------------------------------------------
+# Create non-root operator user
+# --------------------------------------------------------------------------
+RUN useradd --create-home --shell /bin/bash --groups sudo nexus && \
+    echo "nexus ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/nexus && \
+    chmod 0440 /etc/sudoers.d/nexus
+
+# SSH key directory for OpenClaw connection
+RUN mkdir -p /home/nexus/.ssh && \
+    chmod 700 /home/nexus/.ssh && \
+    chown nexus:nexus /home/nexus/.ssh
+
+# --------------------------------------------------------------------------
+# Workspace directories
+# --------------------------------------------------------------------------
+RUN mkdir -p /data/engagements /data/logs /data/reports /workspace && \
+    chown -R nexus:nexus /data /workspace
+
+# --------------------------------------------------------------------------
+# Proxychains configuration (sane defaults)
+# --------------------------------------------------------------------------
+RUN echo "strict_chain\nproxy_dns\n[ProxyList]\nsocks5 127.0.0.1 9050" > /etc/proxychains4.conf
+
+WORKDIR /home/nexus
+USER nexus
+
+EXPOSE 22
+
+# Start SSH server
+CMD ["sudo", "/usr/sbin/sshd", "-D"]

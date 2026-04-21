@@ -1,0 +1,111 @@
+# ============================================================================
+# NEXUS Docker Compose — AI Operations Platform
+# ============================================================================
+# Orchestrates Kali security sandbox + Ubuntu worker for OpenClaw gateway
+#
+# Usage:
+#   docker compose -f nexus/docker-compose.nexus.yml up -d
+#   docker compose -f nexus/docker-compose.nexus.yml down
+#
+# Prerequisites:
+#   - Place SSH public key in nexus/config/nexus_key.pub
+#   - Set environment variables in nexus/.env
+# ============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # Kali Linux Security Sandbox
+  # --------------------------------------------------------------------------
+  kali-sandbox:
+    build:
+      context: .
+      dockerfile: Dockerfile.sandbox-kali
+    container_name: nexus-kali
+    hostname: nexus-kali
+    restart: unless-stopped
+    networks:
+      - nexus-net
+    volumes:
+      - engagement-data:/data
+      - shared-workspace:/workspace
+      - ./config/nexus_key.pub:/home/nexus/.ssh/authorized_keys:ro
+    ports:
+      - "${KALI_SSH_PORT:-2222}:22"
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW        # Required for nmap, tcpdump, scapy
+      - NET_ADMIN       # Required for network tools
+      - SYS_PTRACE      # Required for debugging/forensics
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 4G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ok"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # --------------------------------------------------------------------------
+  # Ubuntu Worker
+  # --------------------------------------------------------------------------
+  ubuntu-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.sandbox-ubuntu
+    container_name: nexus-ubuntu
+    hostname: nexus-ubuntu
+    restart: unless-stopped
+    networks:
+      - nexus-net
+    volumes:
+      - worker-data:/data
+      - shared-workspace:/workspace
+      - ./config/nexus_key.pub:/home/nexus/.ssh/authorized_keys:ro
+    ports:
+      - "${UBUNTU_SSH_PORT:-2223}:22"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 4G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ok"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+# --------------------------------------------------------------------------
+# Networks
+# --------------------------------------------------------------------------
+networks:
+  nexus-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+# --------------------------------------------------------------------------
+# Volumes
+# --------------------------------------------------------------------------
+volumes:
+  engagement-data:
+    name: nexus-engagement-data
+  worker-data:
+    name: nexus-worker-data
+  shared-workspace:
+    name: nexus-shared-workspace

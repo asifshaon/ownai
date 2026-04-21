@@ -1,0 +1,180 @@
+# syntax=docker/dockerfile:1.7
+# ============================================================================
+# NEXUS Ubuntu Worker
+# General-purpose container for dev, analysis, and ops tasks
+# Used by OpenClaw as SSH sandbox backend for non-security operations
+# ============================================================================
+
+FROM ubuntu:24.04
+
+LABEL maintainer="NEXUS AI Platform"
+LABEL description="Ubuntu worker sandbox for development, analysis, and general operations"
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
+# --------------------------------------------------------------------------
+# System update + base utilities
+# --------------------------------------------------------------------------
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      wget \
+      git \
+      vim \
+      nano \
+      tmux \
+      screen \
+      htop \
+      jq \
+      yq \
+      tree \
+      unzip \
+      zip \
+      openssh-server \
+      sudo \
+      locales \
+      procps \
+      iproute2 \
+      iputils-ping \
+      dnsutils \
+      net-tools \
+      lsof \
+      file \
+      bc \
+      software-properties-common \
+    && rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------------------------------
+# Programming Languages
+# --------------------------------------------------------------------------
+
+# Python 3
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3 \
+      python3-pip \
+      python3-venv \
+      python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Node.js 22
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs && \
+    npm install -g pnpm && \
+    rm -rf /var/lib/apt/lists/*
+
+# Go
+RUN apt-get update && apt-get install -y --no-install-recommends golang && \
+    rm -rf /var/lib/apt/lists/*
+
+# Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Build tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential \
+      cmake \
+      pkg-config \
+      libssl-dev \
+      libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------------------------------
+# Python Data / Analysis Libraries
+# --------------------------------------------------------------------------
+RUN pip3 install --break-system-packages --no-cache-dir \
+      jupyter \
+      pandas \
+      numpy \
+      matplotlib \
+      seaborn \
+      scipy \
+      scikit-learn \
+      requests \
+      beautifulsoup4 \
+      lxml \
+      openpyxl \
+      xlsxwriter \
+      tabulate \
+      rich \
+      click \
+      pyyaml \
+      toml \
+      python-dotenv \
+      aiohttp \
+      httpx \
+      paramiko \
+      fabric \
+    || true
+
+# --------------------------------------------------------------------------
+# Database Clients
+# --------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      sqlite3 \
+      postgresql-client \
+      redis-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------------------------------
+# Content / Document Tools
+# --------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      pandoc \
+      wkhtmltopdf \
+      imagemagick \
+      ffmpeg \
+      ghostscript \
+      texlive-latex-base \
+      texlive-fonts-recommended \
+    && rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------------------------------
+# DevOps Tools
+# --------------------------------------------------------------------------
+
+# Docker CLI (for managing other containers)
+RUN curl -fsSL https://get.docker.com | sh || true
+
+# Ansible
+RUN pip3 install --break-system-packages --no-cache-dir ansible || true
+
+# --------------------------------------------------------------------------
+# SSH Server Configuration
+# --------------------------------------------------------------------------
+RUN mkdir -p /var/run/sshd && \
+    echo "PermitRootLogin no" >> /etc/ssh/sshd_config && \
+    echo "PasswordAuthentication no" >> /etc/ssh/sshd_config && \
+    echo "PubkeyAuthentication yes" >> /etc/ssh/sshd_config && \
+    echo "AllowTcpForwarding no" >> /etc/ssh/sshd_config && \
+    echo "X11Forwarding no" >> /etc/ssh/sshd_config
+
+# --------------------------------------------------------------------------
+# Create non-root operator user
+# --------------------------------------------------------------------------
+RUN useradd --create-home --shell /bin/bash --groups sudo nexus && \
+    echo "nexus ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/nexus && \
+    chmod 0440 /etc/sudoers.d/nexus
+
+RUN mkdir -p /home/nexus/.ssh && \
+    chmod 700 /home/nexus/.ssh && \
+    chown nexus:nexus /home/nexus/.ssh
+
+# Rust for nexus user
+RUN su - nexus -c "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y" || true
+
+# --------------------------------------------------------------------------
+# Workspace directories
+# --------------------------------------------------------------------------
+RUN mkdir -p /data/projects /data/logs /data/output /workspace && \
+    chown -R nexus:nexus /data /workspace
+
+WORKDIR /home/nexus
+USER nexus
+
+EXPOSE 22
+
+CMD ["sudo", "/usr/sbin/sshd", "-D"]

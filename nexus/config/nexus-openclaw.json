@@ -1,0 +1,25 @@
+{
+  "agent": {
+    "model": "google/gemini-2.5-flash",
+    "thinking": "medium",
+    "systemPromptFile": "SOUL.md"
+  },
+  "agents": {
+    "defaults": {
+      "sandbox": {
+        "mode": "always",
+        "image": "nexus-kali:latest",
+        "allowedTools": ["bash", "process", "read", "write", "edit"],
+        "timeout": 600
+      }
+    }
+  },
+  "gateway": {
+    "bind": "lan",
+    "controlUi": {
+      "dangerouslyDisableDeviceAuth": true,
+      "allowedOrigins": ["*"],
+      "dangerouslyAllowHostHeaderOriginFallback": true
+    }
+  }
+}

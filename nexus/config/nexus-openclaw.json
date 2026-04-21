@@ -1,25 +1,51 @@
-{
-  "agent": {
-    "model": "google/gemini-2.5-flash",
-    "thinking": "medium",
-    "systemPromptFile": "SOUL.md"
-  },
-  "agents": {
-    "defaults": {
-      "sandbox": {
-        "mode": "always",
-        "image": "nexus-kali:latest",
-        "allowedTools": ["bash", "process", "read", "write", "edit"],
-        "timeout": 600
-      }
-    }
-  },
   "gateway": {
     "bind": "lan",
     "controlUi": {
       "dangerouslyDisableDeviceAuth": true,
       "allowedOrigins": ["*"],
       "dangerouslyAllowHostHeaderOriginFallback": true
+    }
+  },
+  "logging": {
+    "level": "error",
+    "consoleLevel": "info",
+    "redactSensitive": "tools"
+  },
+  "broadcast": {
+    "strategy": "parallel",
+    "default-nexus-group": ["nexus-core", "nexus-architect", "nexus-scribe", "nexus-blackteam"]
+  },
+  "agents": {
+    "list": [
+      {
+        "id": "nexus-core",
+        "name": "NEXUS Core (AG’I-∞)",
+        "workspace": "/home/node/.openclaw/workspace/core"
+      },
+      {
+        "id": "nexus-architect",
+        "name": "The Architect",
+        "workspace": "/home/node/.openclaw/workspace/agents/architect"
+      },
+      {
+        "id": "nexus-scribe",
+        "name": "The Scribe",
+        "workspace": "/home/node/.openclaw/workspace/agents/scribe"
+      },
+      {
+        "id": "nexus-blackteam",
+        "name": "The Black Team",
+        "workspace": "/home/node/.openclaw/workspace/agents/blackteam",
+        "tools": {
+          "allow": ["*"]
+        }
+      }
+    ],
+    "defaults": {
+      "model": "google/gemini-2.0-flash-exp",
+      "sandbox": {
+        "mode": "off"
+      }
     }
   }
 }

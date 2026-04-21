@@ -1,0 +1,40 @@
+# NEXUS-KALI: Tactical AGI Sandbox
+# syntax=docker/dockerfile:1.7
+
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install core utilities and tactical toolset
+RUN --mount=type=cache,id=nexus-kali-apt-cache,target=/var/cache/apt,sharing=locked \
+  --mount=type=cache,id=nexus-kali-apt-lists,target=/var/lib/apt,sharing=locked \
+  apt-get update \
+  && apt-get upgrade -y --no-install-recommends \
+  && apt-get install -y --no-install-recommends \
+    bash \
+    ca-certificates \
+    curl \
+    git \
+    jq \
+    python3 \
+    python3-pip \
+    ripgrep \
+    nmap \
+    masscan \
+    dnsutils \
+    netcat-openbsd \
+    proxychains4 \
+    iputils-ping \
+    procps
+
+# Configure Proxychains
+# We will inject the actual proxy list via environment or volume mount later.
+# For now, we set up a baseline config that looks for a local SOCKS5 proxy.
+RUN echo "strict_chain\nproxy_dns\nremote_dns_subnet 224\ntcp_read_time_out 15000\ntcp_connect_time_out 8000\n[ProxyList]\nsocks5 127.0.0.1 9050" > /etc/proxychains4.conf
+
+# Setup sandbox user
+RUN useradd --create-home --shell /bin/bash sandbox
+USER sandbox
+WORKDIR /home/sandbox
+
+CMD ["sleep", "infinity"]

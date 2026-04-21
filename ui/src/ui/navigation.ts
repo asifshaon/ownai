@@ -3,6 +3,10 @@ import type { IconName } from "./icons.js";
 import { normalizeLowercaseStringOrEmpty } from "./string-coerce.ts";
 
 export const TAB_GROUPS = [
+  {
+    label: "nexus",
+    tabs: ["nexus"],
+  },
   { label: "chat", tabs: ["chat"] },
   {
     label: "control",
@@ -25,6 +29,7 @@ export const TAB_GROUPS = [
 ] as const;
 
 export type Tab =
+  | "nexus"
   | "agents"
   | "overview"
   | "channels"
@@ -46,6 +51,7 @@ export type Tab =
   | "dreams";
 
 const TAB_PATHS: Record<Tab, string> = {
+  nexus: "/nexus",
   agents: "/agents",
   overview: "/overview",
   channels: "/channels",
@@ -157,6 +163,8 @@ export function inferBasePathFromPathname(pathname: string): string {
 
 export function iconForTab(tab: Tab): IconName {
   switch (tab) {
+    case "nexus":
+      return "spark";
     case "agents":
       return "folder";
     case "chat":

@@ -1,0 +1,8 @@
+{
+  "OPENCLAW_SKIP_AUTH_SETUP": "1",
+  "GOOGLE_API_KEY": "AQ.Ab8RN6KtvtqhsDiKqSDQ7QNs7yAYED1B57vQonoCAI4HJmAmAg",
+  "GEMINI_API_KEY": "AQ.Ab8RN6KtvtqhsDiKqSDQ7QNs7yAYED1B57vQonoCAI4HJmAmAg",
+  "OPENCLAW_GATEWAY_TOKEN": "d13bbe6a79d7fe38afeb87c94c2145132a37a565655a90e224d2a197354d6a9c",
+  "OPENCLAW_CONFIG_OVERRIDE": "{\"gateway\":{\"bind\":\"lan\",\"controlUi\":{\"dangerouslyDisableDeviceAuth\":true,\"allowedOrigins\":[\"*\"],\"dangerouslyAllowHostHeaderOriginFallback\":true}},\"logging\":{\"level\":\"error\",\"consoleLevel\":\"info\",\"redactSensitive\":\"tools\"},\"broadcast\":{\"strategy\":\"parallel\",\"default-nexus-group\":[\"nexus-core\",\"nexus-architect\",\"nexus-scribe\",\"nexus-blackteam\"]},\"agents\":{\"list\":[{\"id\":\"nexus-core\",\"name\":\"NEXUS Core (AG’I-∞)\",\"workspace\":\"/home/node/.openclaw/workspace/core\"},{\"id\":\"nexus-architect\",\"name\":\"The Architect\",\"workspace\":\"/home/node/.openclaw/workspace/agents/architect\"},{\"id\":\"nexus-scribe\",\"name\":\"The Scribe\",\"workspace\":\"/home/node/.openclaw/workspace/agents/scribe\"},{\"id\":\"nexus-blackteam\",\"name\":\"The Black Team\",\"workspace\":\"/home/node/.openclaw/workspace/agents/blackteam\",\"tools\":{\"allow\":[\"*\"]}}],\"defaults\":{\"model\":\"google/gemini-2.0-flash-exp\",\"sandbox\":{\"mode\":\"off\"}}}}",
+  "EXTENSIONS": "gemini"
+}

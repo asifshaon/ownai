@@ -1,0 +1,15 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '--build-arg', 'DOCKER_BUILDKIT=1',
+      '--build-arg', 'OPENCLAW_DOCKER_APT_PACKAGES=nmap masscan dnsutils netcat-openbsd proxychains4 python3-pip',
+      '-t', 'gcr.io/$PROJECT_ID/nexus-gateway',
+      '.'
+    ]
+    env:
+      - 'DOCKER_BUILDKIT=1'
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/nexus-gateway']
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -14,8 +14,11 @@ CONFIG_FILE="$CONFIG_DIR/openclaw.json"
 # Create config directory if needed
 mkdir -p "$CONFIG_DIR"
 
-# Write initial config only if one doesn't exist yet
-if [ ! -f "$CONFIG_FILE" ]; then
+# Use OVERRIDE if provided, otherwise check for existing file
+if [ -n "$OPENCLAW_CONFIG_OVERRIDE" ]; then
+  echo "[entrypoint] Applying OPENCLAW_CONFIG_OVERRIDE..."
+  echo "$OPENCLAW_CONFIG_OVERRIDE" > "$CONFIG_FILE"
+elif [ ! -f "$CONFIG_FILE" ]; then
   echo "[entrypoint] Writing initial openclaw.json config for Cloud Run..."
   cat > "$CONFIG_FILE" <<EOF
 {
@@ -23,7 +26,8 @@ if [ ! -f "$CONFIG_FILE" ]; then
     "bind": "lan",
     "controlUi": {
       "dangerouslyDisableDeviceAuth": true,
-      "allowedOrigins": ["*"]
+      "allowedOrigins": ["*", "https://agi.neuralnetwork.live", "https://ownai.neuralnetwork.live"],
+      "dangerouslyAllowHostHeaderOriginFallback": true
     }
   }
 }

@@ -1,0 +1,11 @@
+{
+  "instances": [
+    {
+      "prompt": "Hello, NEXUS Core. Confirm identity."
+    }
+  ],
+  "parameters": {
+    "max_new_tokens": 100,
+    "temperature": 0.7
+  }
+}

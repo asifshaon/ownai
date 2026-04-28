@@ -189,3 +189,4 @@ extensions/qa-lab/web/dist/
 extensions/**/.openclaw-runtime-deps.json
 extensions/**/.openclaw-runtime-deps-stamp.json
 env-vars-nexus.yaml
+ide-agent-conversations/

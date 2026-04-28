@@ -1,0 +1,12 @@
+OPENCLAW_GATEWAY_TOKEN: d13bbe6a79d7fe38afeb87c94c2145132a37a565655a90e224d2a197354d6a9c
+OPENCLAW_GATEWAY_BIND: lan
+OPENCLAW_GATEWAY_PORT: "8080"
+OPENCLAW_SESSION_STORE_DRIVER: file
+OPENCLAW_GATEWAY_CONTROL_UI_ALLOWED_ORIGINS: "*"
+OPENCLAW_GATEWAY_CONTROL_UI_DANGEROUSLY_ALLOW_HOST_HEADER_ORIGIN_FALLBACK: "1"
+GOOGLE_API_KEY: AQ.Ab8RN6KtvtqhsDiKqSDQ7QNs7yAYED1B57vQonoCAI4HJmAmAg
+GEMINI_API_KEY: AQ.Ab8RN6KtvtqhsDiKqSDQ7QNs7yAYED1B57vQonoCAI4HJmAmAg
+OPENAI_API_KEY: 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
+OPENCLAW_STATE_DIR: /home/node/.openclaw
+OPENCLAW_SKIP_CHANNELS: "1"
+OPENCLAW_CONFIG_OVERRIDE: '{"gateway":{"mode":"local","bind":"lan","controlUi":{"dangerouslyDisableDeviceAuth":true,"allowedOrigins":["*","https://agi.neuralnetwork.live","https://ownai.neuralnetwork.live"],"dangerouslyAllowHostHeaderOriginFallback":true}},"channels":{"whatsapp":{"enabled":false}},"ui":{"assistant":{"name":"AG’I-∞","avatar":"∞"}}}'

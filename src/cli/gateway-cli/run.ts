@@ -307,6 +307,10 @@ async function runGatewayCommand(opts: GatewayRunOpts) {
     defaultRuntime.exit(1);
   }
   const port = portOverride ?? resolveGatewayPort(cfg);
+  if (process.env.K_SERVICE) {
+    console.log(`[AGI-INFINITY] Port Resolved: ${port} (Source: ${portOverride ? "flag" : "config/env"})`);
+    console.log(`[AGI-INFINITY] State Dir: ${resolveStateDir(process.env)}`);
+  }
   if (!Number.isFinite(port) || port <= 0) {
     defaultRuntime.error("Invalid port");
     defaultRuntime.exit(1);
@@ -433,6 +437,9 @@ async function runGatewayCommand(opts: GatewayRunOpts) {
     configAuditPath,
     mode,
   });
+  if (process.env.K_SERVICE) {
+    console.log(`[AGI-INFINITY] Start Guard Errors: ${guardErrors.length} (Mode: ${mode || "unset"})`);
+  }
   if (guardErrors.length > 0) {
     for (const error of guardErrors) {
       defaultRuntime.error(error);

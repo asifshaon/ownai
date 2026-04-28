@@ -46,6 +46,9 @@ if (
   const { installGaxiosFetchCompat } = await import("./infra/gaxios-fetch-compat.js");
 
   await installGaxiosFetchCompat();
+  if (process.env.K_SERVICE) {
+    console.log(`[AGI-INFINITY] Nexus Control Tower breathing... (Service: ${process.env.K_SERVICE}, Revision: ${process.env.K_REVISION})`);
+  }
   process.title = "openclaw";
   ensureOpenClawExecMarkerOnProcess();
   installProcessWarningFilter();

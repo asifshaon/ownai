@@ -1396,7 +1396,7 @@ export function renderApp(state: AppViewState) {
               </button>
             </div>`
           : nothing}
-        ${state.tab === "config"
+        ${state.tab === "config" || state.tab === "nexus"
           ? nothing
           : html`<section class="content-header">
               <div>

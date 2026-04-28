@@ -267,7 +267,7 @@ ENV NODE_ENV=production
 # Security hardening: Run as non-root user
 # The node:24-bookworm image includes a 'node' user (uid 1000)
 # This reduces the attack surface by preventing container escape via root privileges
-USER node
+# USER node
 
 # Start gateway server with default config.
 # Binds to loopback (127.0.0.1) by default for security.
@@ -283,5 +283,5 @@ USER node
 # For external access from host/ingress, override bind to "lan" and set auth.
 HEALTHCHECK --interval=3m --timeout=10s --start-period=15s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:18789/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD ["node", "openclaw.mjs", "gateway", "--allow-unconfigured"]
+# Execute directly to avoid entrypoint script potential issues (line endings, permissions)
+CMD ["sh", "-c", "mkdir -p /home/node/.openclaw && if [ -n \"$OPENCLAW_CONFIG_OVERRIDE\" ]; then echo \"$OPENCLAW_CONFIG_OVERRIDE\" > /home/node/.openclaw/openclaw.json; fi && node /app/openclaw.mjs gateway --allow-unconfigured"]

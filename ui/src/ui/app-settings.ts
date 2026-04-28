@@ -311,6 +311,7 @@ export async function refreshActiveTab(host: SettingsHost) {
       await loadConfigSchema(app);
       await loadConfig(app);
       return;
+    case "nexus":
     case "overview":
       await loadOverview(host);
       return;

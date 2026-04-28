@@ -1,31 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createStreamingErrorResponse } from "../test-support/streaming-error-response.js";
 import { elevenLabsTTS } from "./tts.js";
 
 describe("elevenlabs tts diagnostics", () => {
   const originalFetch = globalThis.fetch;
-
-  function createStreamingErrorResponse(params: {
-    status: number;
-    chunkCount: number;
-    chunkSize: number;
-    byte: number;
-  }): { response: Response; getReadCount: () => number } {
-    let reads = 0;
-    const stream = new ReadableStream<Uint8Array>({
-      pull(controller) {
-        if (reads >= params.chunkCount) {
-          controller.close();
-          return;
-        }
-        reads += 1;
-        controller.enqueue(new Uint8Array(params.chunkSize).fill(params.byte));
-      },
-    });
-    return {
-      response: new Response(stream, { status: params.status }),
-      getReadCount: () => reads,
-    };
-  }
 
   function createDefaultTtsRequest() {
     return {
@@ -44,6 +22,11 @@ describe("elevenlabs tts diagnostics", () => {
       },
       timeoutMs: 5_000,
     };
+  }
+
+  function getHeadersFromFirstFetchCall(fetchMock: ReturnType<typeof vi.fn>): Headers {
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    return new Headers(init?.headers);
   }
 
   async function expectDefaultTtsRequestToThrow(message: string | RegExp) {
@@ -101,5 +84,26 @@ describe("elevenlabs tts diagnostics", () => {
     await expectDefaultTtsRequestToThrow("ElevenLabs API error (503)");
 
     expect(streamed.getReadCount()).toBeLessThan(200);
+  });
+
+  it("keeps the MPEG Accept header for MP3 output", async () => {
+    const fetchMock = vi.fn(async () => new Response(Buffer.from("mp3")));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    await elevenLabsTTS(createDefaultTtsRequest());
+
+    expect(getHeadersFromFirstFetchCall(fetchMock).get("accept")).toBe("audio/mpeg");
+  });
+
+  it("omits the MPEG Accept header for PCM telephony output", async () => {
+    const fetchMock = vi.fn(async () => new Response(Buffer.from("pcm")));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    await elevenLabsTTS({
+      ...createDefaultTtsRequest(),
+      outputFormat: "pcm_22050",
+    });
+
+    expect(getHeadersFromFirstFetchCall(fetchMock).has("accept")).toBe(false);
   });
 });

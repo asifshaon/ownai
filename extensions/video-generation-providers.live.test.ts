@@ -42,12 +42,12 @@ import {
 import alibabaPlugin from "./alibaba/index.js";
 import byteplusPlugin from "./byteplus/index.js";
 import falPlugin from "./fal/index.js";
-import { maybeLoadShellEnvForGenerationProviders } from "./generation-live-test-helpers.js";
 import googlePlugin from "./google/index.js";
 import minimaxPlugin from "./minimax/index.js";
 import openaiPlugin from "./openai/index.js";
 import qwenPlugin from "./qwen/index.js";
 import runwayPlugin from "./runway/index.js";
+import { maybeLoadShellEnvForGenerationProviders } from "./test-support/generation-live-test-helpers.js";
 import togetherPlugin from "./together/index.js";
 import vydraPlugin from "./vydra/index.js";
 import xaiPlugin from "./xai/index.js";
@@ -232,6 +232,13 @@ function resolveLiveVideoSkipReason(message: string): string | null {
   }
   if (isOverloadedErrorMessage(message) || isServerErrorMessage(message)) {
     return "provider outage";
+  }
+  if (
+    /HTTP\s+404/i.test(message) &&
+    /Invalid URL/i.test(message) &&
+    /\/platform\/video_gen/i.test(message)
+  ) {
+    return "provider endpoint drift";
   }
   if (/access denied|not authorized|not enabled|permission denied/i.test(message)) {
     return "provider/model drift";

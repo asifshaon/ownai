@@ -323,7 +323,7 @@ async function waitForProbe(params: {
 function requestStatus(port: number, pathname: string): Promise<number> {
   return new Promise((resolve, reject) => {
     const req = request(
-      { host: "127.0.0.1", method: "GET", path: pathname, port, timeout: 1000 },
+      { host: "127.0.0.1", method: "GET", path: pathname, port, timeout: 100 },
       (res) => {
         res.resume();
         res.on("end", () => resolve(res.statusCode ?? 0));
@@ -440,12 +440,39 @@ function killProcessTree(child: ChildProcessWithoutNullStreams, signal: NodeJS.S
 }
 
 function collectStartupTrace(line: string, startupTrace: Record<string, number>): void {
-  const match = /startup trace: ([^ ]+) ([0-9.]+)ms total=([0-9.]+)ms/u.exec(line);
-  if (!match) {
+  const phaseMatch = /startup trace: ([^ ]+) ([0-9.]+)ms total=([0-9.]+)ms(?: (.*))?/u.exec(line);
+  if (phaseMatch) {
+    startupTrace[phaseMatch[1]] = Number(phaseMatch[2]);
+    startupTrace[`${phaseMatch[1]}.total`] = Number(phaseMatch[3]);
+    for (const metric of parseStartupTraceMetrics(phaseMatch[4] ?? "")) {
+      startupTrace[`${phaseMatch[1]}.${metric.key}`] = metric.value;
+    }
     return;
   }
-  startupTrace[match[1]] = Number(match[2]);
-  startupTrace[`${match[1]}.total`] = Number(match[3]);
+  const detailMatch = /startup trace: ([^ ]+) (.*)/u.exec(line);
+  if (!detailMatch) {
+    return;
+  }
+  for (const metric of parseStartupTraceMetrics(detailMatch[2])) {
+    startupTrace[`${detailMatch[1]}.${metric.key}`] = metric.value;
+  }
+}
+
+function parseStartupTraceMetrics(raw: string): Array<{ key: string; value: number }> {
+  const metrics: Array<{ key: string; value: number }> = [];
+  for (const part of raw.trim().split(/\s+/u)) {
+    const metricMatch = /^([A-Za-z][A-Za-z0-9]*)=([0-9.]+)(?:ms)?$/u.exec(part);
+    if (!metricMatch) {
+      continue;
+    }
+    const key = metricMatch[1];
+    const value = Number(metricMatch[2]);
+    if (!Number.isFinite(value) || (key !== "eventLoopMax" && !key.endsWith("Ms"))) {
+      continue;
+    }
+    metrics.push({ key, value });
+  }
+  return metrics;
 }
 
 async function runGatewaySample(options: {
@@ -511,20 +538,22 @@ async function runGatewaySample(options: {
   child.stdout.on("data", onChunk);
   child.stderr.on("data", onChunk);
 
-  const healthz = await waitForProbe({
-    deadlineAt,
-    isDone: () => childExited,
-    path: "/healthz",
-    port,
-    startAt,
-  });
-  const readyz = await waitForProbe({
-    deadlineAt,
-    isDone: () => childExited,
-    path: "/readyz",
-    port,
-    startAt,
-  });
+  const [healthz, readyz] = await Promise.all([
+    waitForProbe({
+      deadlineAt,
+      isDone: () => childExited,
+      path: "/healthz",
+      port,
+      startAt,
+    }),
+    waitForProbe({
+      deadlineAt,
+      isDone: () => childExited,
+      path: "/readyz",
+      port,
+      startAt,
+    }),
+  ]);
   const exit = await stopChild(child);
   await childExitPromise.catch(() => null);
   rmSync(root, { force: true, maxRetries: 3, recursive: true, retryDelay: 100 });

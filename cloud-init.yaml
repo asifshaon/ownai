@@ -1,0 +1,60 @@
+#cloud-config
+
+write_files:
+  - path: /etc/docker/compose/docker-compose.yaml
+    permissions: "0644"
+    owner: root
+    content: |
+      version: '3.8'
+      services:
+        nexus:
+          image: gcr.io/ai-assistent-491400/nexus-gateway:latest
+          restart: always
+          network_mode: host
+          env_file: /etc/docker/compose/env-vars-nexus.yaml
+          volumes:
+            - /mnt/stateful_partition/nexus-data:/home/node/.openclaw
+        caddy:
+          image: caddy:latest
+          restart: always
+          network_mode: host
+          volumes:
+            - caddy_data:/data
+            - caddy_config:/config
+          command: caddy reverse-proxy --from agi.neuralnetwork.live --to localhost:8080
+      volumes:
+        caddy_data:
+        caddy_config:
+
+  - path: /etc/systemd/system/nexus-app.service
+    permissions: "0644"
+    owner: root
+    content: |
+      [Unit]
+      Description=NEXUS Application via Docker Compose
+      Requires=docker.service
+      After=docker.service
+      
+      [Service]
+      Type=oneshot
+      RemainAfterExit=true
+      WorkingDirectory=/etc/docker/compose
+      ExecStartPre=/usr/bin/docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:$PWD" -w="$PWD" docker/compose:1.29.2 pull
+      ExecStart=/usr/bin/docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:$PWD" -w="$PWD" docker/compose:1.29.2 up -d
+      ExecStop=/usr/bin/docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:$PWD" -w="$PWD" docker/compose:1.29.2 down
+      
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - mkdir -p /mnt/stateful_partition/nexus-data
+  - chown -R 1000:1000 /mnt/stateful_partition/nexus-data
+  - cp /var/lib/google/env-vars-nexus.yaml /etc/docker/compose/env-vars-nexus.yaml || true
+  - systemctl daemon-reload
+  - systemctl start nexus-app.service
+
+  - path: /etc/docker/compose/env-vars-nexus.yaml
+    permissions: "0600"
+    owner: root
+    content: |
+$(cat env-vars-nexus.yaml | sed 's/^/      /')

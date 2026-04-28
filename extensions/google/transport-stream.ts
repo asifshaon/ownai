@@ -472,8 +472,15 @@ export function buildGoogleGenerativeAiParams(
     generationConfig.thinkingConfig = thinkingConfig;
   }
 
+  const contents = convertGoogleMessages(model, context);
+  if (contents.length === 0 && context.systemPrompt) {
+    // Safety: Gemini requires 'contents' to be non-empty if the field is present.
+    // If we only have a system prompt, we add a placeholder user message to ignite the turn.
+    contents.push({ role: "user", parts: [{ text: "." }] });
+  }
+
   const params: GoogleGenerateContentRequest = {
-    contents: convertGoogleMessages(model, context),
+    contents,
   };
   if (typeof options?.cachedContent === "string" && options.cachedContent.trim()) {
     params.cachedContent = options.cachedContent.trim();

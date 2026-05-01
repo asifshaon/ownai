@@ -17,6 +17,7 @@ services:
   # Kali Linux Security Sandbox
   # --------------------------------------------------------------------------
   kali-sandbox:
+    image: nexus-kali:latest
     build:
       context: .
       dockerfile: Dockerfile.sandbox-kali
@@ -34,6 +35,9 @@ services:
     cap_drop:
       - ALL
     cap_add:
+      - SYS_CHROOT    # Required by sshd pre-auth privilege separation
+      - SETUID        # Required for sshd sessions as the nexus user
+      - SETGID        # Required for sshd sessions as the nexus user
       - NET_RAW        # Required for nmap, tcpdump, scapy
       - NET_ADMIN       # Required for network tools
       - SYS_PTRACE      # Required for debugging/forensics
@@ -57,6 +61,7 @@ services:
   # Ubuntu Worker
   # --------------------------------------------------------------------------
   ubuntu-worker:
+    image: nexus-ubuntu:latest
     build:
       context: .
       dockerfile: Dockerfile.sandbox-ubuntu
@@ -73,6 +78,10 @@ services:
       - "${UBUNTU_SSH_PORT:-2223}:22"
     cap_drop:
       - ALL
+    cap_add:
+      - SYS_CHROOT    # Required by sshd pre-auth privilege separation
+      - SETUID        # Required for sshd sessions as the nexus user
+      - SETGID        # Required for sshd sessions as the nexus user
     security_opt:
       - no-new-privileges:true
     deploy:

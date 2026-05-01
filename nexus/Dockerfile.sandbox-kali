@@ -141,9 +141,8 @@ RUN mkdir -p /opt/post-exploit && \
 RUN apt-get update && apt-get install -y --no-install-recommends \
       binwalk \
       foremost \
-      volatility3 \
       radare2 \
-      strings \
+      binutils \
       exiftool \
       steghide \
     && rm -rf /var/lib/apt/lists/*
@@ -189,6 +188,7 @@ RUN pip3 install --break-system-packages --no-cache-dir \
       censys \
       virustotal3 \
       OTXv2 \
+      volatility3 \
     || true
 
 # --------------------------------------------------------------------------
@@ -198,6 +198,7 @@ RUN mkdir -p /var/run/sshd && \
     echo "PermitRootLogin no" >> /etc/ssh/sshd_config && \
     echo "PasswordAuthentication no" >> /etc/ssh/sshd_config && \
     echo "PubkeyAuthentication yes" >> /etc/ssh/sshd_config && \
+    echo "StrictModes no" >> /etc/ssh/sshd_config && \
     echo "AllowTcpForwarding no" >> /etc/ssh/sshd_config && \
     echo "X11Forwarding no" >> /etc/ssh/sshd_config
 
@@ -225,9 +226,9 @@ RUN mkdir -p /data/engagements /data/logs /data/reports /workspace && \
 RUN echo "strict_chain\nproxy_dns\n[ProxyList]\nsocks5 127.0.0.1 9050" > /etc/proxychains4.conf
 
 WORKDIR /home/nexus
-USER nexus
+USER root
 
 EXPOSE 22
 
 # Start SSH server
-CMD ["sudo", "/usr/sbin/sshd", "-D"]
+CMD ["/usr/sbin/sshd", "-D", "-e"]

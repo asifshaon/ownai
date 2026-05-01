@@ -149,6 +149,7 @@ RUN mkdir -p /var/run/sshd && \
     echo "PermitRootLogin no" >> /etc/ssh/sshd_config && \
     echo "PasswordAuthentication no" >> /etc/ssh/sshd_config && \
     echo "PubkeyAuthentication yes" >> /etc/ssh/sshd_config && \
+    echo "StrictModes no" >> /etc/ssh/sshd_config && \
     echo "AllowTcpForwarding no" >> /etc/ssh/sshd_config && \
     echo "X11Forwarding no" >> /etc/ssh/sshd_config
 
@@ -173,8 +174,8 @@ RUN mkdir -p /data/projects /data/logs /data/output /workspace && \
     chown -R nexus:nexus /data /workspace
 
 WORKDIR /home/nexus
-USER nexus
+USER root
 
 EXPOSE 22
 
-CMD ["sudo", "/usr/sbin/sshd", "-D"]
+CMD ["/usr/sbin/sshd", "-D", "-e"]
